@@ -14,8 +14,15 @@ const articlesSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    date: {
-        type: Date,
+    slug: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    status: {
+        type: String,
+        required: true,
+        default: 'inactive',
     },
     featuredImage: {
         type: String, // cloudinary image url

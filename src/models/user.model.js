@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
         type: String, // cloudinary image url
-        required: true,
     },
     refreshToken: {
         type: String,
@@ -41,7 +40,7 @@ userSchema.methods.isPasswordCorrect = async function (providedPassword) {
 userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
 		{
-			id: this._id,
+			_id: this._id,
 			email: this.email,
 		},
 		process.env.ACCESS_TOKEN_SECRET,
@@ -52,7 +51,7 @@ userSchema.methods.generateAccessToken = function () {
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {
-            id: this._id,
+            _id: this._id,
         },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
