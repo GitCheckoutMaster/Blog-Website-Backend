@@ -8,10 +8,10 @@ import { ObjectId } from "mongodb";
 
 const createArticle = asyncHandler(async (req, res) => {
     const { content, title, slug, status } = req.body;
-    const featuredImage = req.file.path;
+    const featuredImage = req.file?.path;
 
     if (!content || !title || !slug || !featuredImage) {
-        throw new ApiError(400, "Missing required fields");
+        throw new ApiError(401, "Missing required fields");
     }
     if (!status) {
         status = "inactive";
@@ -20,6 +20,15 @@ const createArticle = asyncHandler(async (req, res) => {
     const imageUrl = await uploadOnCloudinary(featuredImage);
     if (!imageUrl) {
         throw new ApiError(500, "Failed to upload image");
+    }
+
+    const isArticleExists = await Articles.aggregate([
+        {
+            $match: { slug }
+        }
+    ])
+    if (isArticleExists.length > 0) {
+        throw new ApiError(400, "Article Exists");
     }
 
     const article = await Articles.create({
@@ -34,6 +43,7 @@ const createArticle = asyncHandler(async (req, res) => {
     if (!article) {
         throw new ApiError(500, "Failed to create article");
     }
+    console.log("Article created successfully!");
 
     return res
         .status(200)
@@ -54,6 +64,7 @@ const getArticle = asyncHandler(async (req, res) => {
     if (!article) {
         throw new ApiError(404, "Article not found");
     }
+    console.log("Article fetched successfully!");
 
     //todo 3: return the article
     return res
@@ -98,6 +109,7 @@ const updateArticle = asyncHandler(async (req, res) => {
     if (!updatedArticle) {
         throw new ApiError(500, "Failed to update article");
     }
+    console.log("Article updated successfully!");
 
     return res
         .status(200)
@@ -117,6 +129,7 @@ const deleteArticle = asyncHandler(async (req, res) => {
     if (!article) {
         throw new ApiError(404, "Article not found");
     }
+    console.log("Article deleted successfully");
 
     return res
         .status(200)
@@ -128,7 +141,16 @@ const deleteArticle = asyncHandler(async (req, res) => {
 const getArticles = asyncHandler(async (req, res) => {
     const {userid} = req.params;
     if (!userid) {
-        throw new ApiError(400, "Missing user id");
+        const articles = await Articles.find();
+        if (!articles) {
+            throw new ApiError(404, "Articles not found");
+        }
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, articles, "All articles retrieved successfully")
+            );
     }
 
     const isUser = await User.findOne({ _id: new ObjectId(userid) });
@@ -139,13 +161,15 @@ const getArticles = asyncHandler(async (req, res) => {
     const articles = await Articles.aggregate([
         {
             $match: {
-                userid: userid
+                userid: userid,
+                status: "active",
             }
         }
     ]);
     if (!articles) {
         throw new ApiError(404, "Articles not found");
     }
+    console.log("All articles are retrived successfully!");
 
     return res
         .status(200)

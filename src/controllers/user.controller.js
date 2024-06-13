@@ -23,34 +23,36 @@ async function generateAccessAndRefreshTokens(userid) {
 const registerUser = asyncHandler(async (req, res) => {
     const { email, password, name } = req.body;
 	if (!email || !password || !name) {
-		throw new ApiError(400, "Missing required fields");
+        throw new ApiError(400, "Missing required fields");
 	}
-
+    
 	// Check if user with email exists
 	const userExists = await User.findOne({ email });
-
+    
 	const avatarPath = req.file?.path;
-	if (!avatarPath) {
-		throw new ApiError(400, "Avatar is required");
+    let avatarUrl = null;
+	if (avatarPath) {
+        avatarUrl = await uploadOnCloudinary(avatarPath);
 	}
-	const avatarUrl = await uploadOnCloudinary(avatarPath);
 	if (userExists) {
-		throw new ApiError(400, "User with this email already exists");
-	}
-	if (!avatarUrl) {
-		throw new ApiError(500, "Failed to upload avatar");
+        throw new ApiError(400, "User with this email already exists");
 	}
 
+    
 	const newUser = await User.create({
-		name: name,
+        name: name,
 		password: password,
 		email: email,
-		avatar: avatarUrl.url,
+		avatar: avatarUrl ? avatarUrl.url : "",
 	});
-
+    
 	if (!newUser) {
-		throw new ApiError(500, "Failed to create user");
+        throw new ApiError(500, "Failed to create user");
 	}
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(newUser._id);
+    const options = {
+		httpOnly: true,
+	};
 
 	const createdUser = await User.findById(newUser._id).select(
 		"-password -refreshToken"
@@ -58,9 +60,12 @@ const registerUser = asyncHandler(async (req, res) => {
 	if (!createdUser) {
 		throw new ApiError(500, "Failed to store user");
 	}
+    console.log("registered successfully");
 
 	return res
 		.status(200)
+        .cookie("RefreshToken", refreshToken, options)
+        .cookie("AccessToken", accessToken, options)
 		.json(new ApiResponse(200, createdUser, "User created successfully"));
 });
 
@@ -96,9 +101,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
 		httpOnly: true,
-		secure: true,
 	};
-
+    console.log("logged in successfully");
     return res
         .status(200)
         .cookie("RefreshToken", refreshToken, options)
@@ -146,6 +150,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 		},
 		{ new: true }
 	);
+    console.log("logged out successfully");
 
     return res
         .status(200)
@@ -157,6 +162,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+    console.log("user fetched successfully!!");
     return res
         .status(200)
         .json(

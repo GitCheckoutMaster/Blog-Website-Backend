@@ -17,6 +17,6 @@ userRouter.route("/new-access-token").post(generateNewAccessToken);
 
 // authenticated routes
 userRouter.route("/logout").post(verifyJWT, logoutUser);
-userRouter.route("/getCurrentUser").get(verifyJWT, getCurrentUser);
+userRouter.route("/get-user").get(verifyJWT, getCurrentUser);
 
 export default userRouter;
